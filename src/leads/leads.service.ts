@@ -167,20 +167,42 @@ export class LeadsService {
         return { ok: true, already: true, lead };
       }
 
+      const BALLS_PER_QUALIFIED = 5;
+      
       const updated = await tx.lead.update({
         where: { id: leadId },
         data: {
           status: "QUALIFIED",
           qualifiedAt: new Date(),
+          ballsAwarded: BALLS_PER_QUALIFIED,
+          ballsAwardedAt: new Date(),
         },
       });
 
+      // Refera​rga balllarni qo'shish
       await tx.botUser.update({
         where: { id: lead.referrerUserId },
-        data: { qualifiedCount: { increment: 1 } },
+        data: { 
+          qualifiedCount: { increment: 1 },
+          qualifiedBalls: { increment: BALLS_PER_QUALIFIED },
+          totalBalls: { increment: BALLS_PER_QUALIFIED },
+        },
       });
 
       return { ok: true, already: false, lead: updated };
+    });
+  }
+
+  // Lead-ning direct referral ball-larini qo'shish
+  async addDirectReferralBall(referrerUserId: string) {
+    const BALLS_PER_REFERRAL = 1;
+    
+    return this.prisma.botUser.update({
+      where: { id: referrerUserId },
+      data: {
+        directReferralBalls: { increment: BALLS_PER_REFERRAL },
+        totalBalls: { increment: BALLS_PER_REFERRAL },
+      },
     });
   }
 }

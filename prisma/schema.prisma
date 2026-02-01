@@ -20,47 +20,61 @@ enum LeadStatus {
 
 // schema.prisma
 model BotUser {
-  id            String   @id @default(cuid())
-  telegramId    BigInt   @unique
-  username      String?
-  firstName     String?
-  lastName      String?
-  languageCode  String?
-  refCode       String   @unique
-  leadsCount    Int      @default(0)
-  qualifiedCount Int     @default(0)
-  referredById  String?
-  isChannelMember Boolean @default(false)  // Yangi qo'shildi
-  lastMembershipCheck DateTime?            // Yangi qo'shildi
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  telegramId              BigInt   @unique
+  username                String?
+  firstName               String?
+  lastName                String?
+  languageCode            String?
+  refCode                 String   @unique
+  leadsCount              Int      @default(0)
+  qualifiedCount          Int      @default(0)
+  referredById            String?
+  isChannelMember         Boolean  @default(false)
+  lastMembershipCheck     DateTime?
   
-  referredUsers Lead[]   @relation("referrer")
-  leads         Lead[]   @relation("lead")
+  // Ball tizimi
+  totalBalls              Int      @default(0)
+  directReferralBalls     Int      @default(0)  // Har taklif +1 ball
+  qualifiedBalls          Int      @default(0)  // Har toza lead +5 ball
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  
+  referredUsers           Lead[]   @relation("referrer")
+  leads                   Lead[]   @relation("lead")
+  
+  @@index([totalBalls])
+  @@index([isChannelMember])
 }
 
 model Lead {
-  id             String     @id @default(uuid())
-  createdAt      DateTime   @default(now())
-  qualifiedAt    DateTime?
+  id               String     @id @default(uuid())
+  createdAt        DateTime   @default(now())
+  qualifiedAt      DateTime?
 
-  status         LeadStatus @default(PENDING)
+  status           LeadStatus @default(PENDING)
 
-  leadUserId     String
-  referrerUserId String
+  leadUserId       String
+  referrerUserId   String
 
   // snapshot (admin listda qulay)
-  leadName       String?
-  leadUsername   String?
-  referrerName   String?
+  leadName         String?
+  leadUsername     String?
+  referrerName     String?
   referrerUsername String?
 
   // join request tracking
-  joinRequestId  String?    // Telegram join request ID
-  joinedAt       DateTime?  // Kanalga kirgan vaqt
+  joinRequestId    String?    // Telegram join request ID
+  joinedAt         DateTime?  // Kanalga kirgan vaqt
 
-  leadUser       BotUser @relation("LeadUser", fields: [leadUserId], references: [id])
-  referrerUser   BotUser @relation("ReferrerUser", fields: [referrerUserId], references: [id])
+  // Ball tizimi
+  ballsAwarded     Int        @default(0)
+  ballsAwardedAt   DateTime?
+
+  leadUser         BotUser @relation("LeadUser", fields: [leadUserId], references: [id], onDelete: Cascade)
+  referrerUser     BotUser @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
 
   @@unique([leadUserId]) // bitta odam 1 martagina lead
+  @@index([status, createdAt])
 }
