@@ -50,6 +50,16 @@ export class UsersService {
     });
   }
 
+  async updateChannelMembership(telegramId: bigint, isMember: boolean) {
+    return this.prisma.botUser.update({
+      where: { telegramId },
+      data: {
+        isChannelMember: isMember,
+        lastMembershipCheck: new Date(),
+      },
+    });
+  }
+
   async createOrUpdateFromTelegram(tg: {
     telegramId: bigint;
     username?: string | null;
