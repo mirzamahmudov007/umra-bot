@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum LeadStatus {
+  PENDING
+  JOINED
+  QUALIFIED
+}
+
+// schema.prisma
+model BotUser {
+  id            String   @id @default(cuid())
+  telegramId    BigInt   @unique
+  username      String?
+  firstName     String?
+  lastName      String?
+  languageCode  String?
+  refCode       String   @unique
+  leadsCount    Int      @default(0)
+  qualifiedCount Int     @default(0)
+  referredById  String?
+  isChannelMember Boolean @default(false)  // Yangi qo'shildi
+  lastMembershipCheck DateTime?            // Yangi qo'shildi
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  referredUsers Lead[]   @relation("referrer")
+  leads         Lead[]   @relation("lead")
+}
+
+model Lead {
+  id             String     @id @default(uuid())
+  createdAt      DateTime   @default(now())
+  qualifiedAt    DateTime?
+
+  status         LeadStatus @default(PENDING)
+
+  leadUserId     String
+  referrerUserId String
+
+  // snapshot (admin listda qulay)
+  leadName       String?
+  leadUsername   String?
+  referrerName   String?
+  referrerUsername String?
+
+  // join request tracking
+  joinRequestId  String?    // Telegram join request ID
+  joinedAt       DateTime?  // Kanalga kirgan vaqt
+
+  leadUser       BotUser @relation("LeadUser", fields: [leadUserId], references: [id])
+  referrerUser   BotUser @relation("ReferrerUser", fields: [referrerUserId], references: [id])
+
+  @@unique([leadUserId]) // bitta odam 1 martagina lead
+}
