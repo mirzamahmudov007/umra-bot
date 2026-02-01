@@ -59,8 +59,8 @@ model Lead {
   joinRequestId    String?    // Telegram join request ID
   joinedAt         DateTime?  // Kanalga kirgan vaqt
 
-  leadUser         BotUser @relation("LeadUser", fields: [leadUserId], references: [id], onDelete: Cascade)
-  referrerUser     BotUser @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  leadUser         BotUser @relation("lead", fields: [leadUserId], references: [id], onDelete: Cascade)
+  referrerUser     BotUser @relation("referrer", fields: [referrerUserId], references: [id], onDelete: Cascade)
 
   @@unique([leadUserId]) // bitta odam 1 martagina lead
   @@index([status, createdAt])

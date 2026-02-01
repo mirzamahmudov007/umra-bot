@@ -177,12 +177,11 @@ export class LeadsService {
         },
       });
 
-      // Refera​rga balllarni qo'shish
+      // Refera​rga qualifiedCount ni o'zgart
       await tx.botUser.update({
         where: { id: lead.referrerUserId },
         data: { 
           qualifiedCount: { increment: 1 },
-          totalBalls: { increment: BALLS_PER_QUALIFIED },
         },
       });
 
@@ -190,16 +189,20 @@ export class LeadsService {
     });
   }
 
-  // Lead-ning direct referral ball-larini qo'shish
+  // Lead-ning direct referral ball-larini qo'shish (ballarni hisoblash kerak leadsCount dan)
   async addDirectReferralBall(referrerUserId: string) {
-    const BALLS_PER_REFERRAL = 1;
-    
-    return this.prisma.botUser.update({
+    // Hisoblash: leadsCount * 1 + qualifiedCount * 5
+    const user = await this.prisma.botUser.findUnique({
       where: { id: referrerUserId },
-      data: {
-        totalBalls: { increment: BALLS_PER_REFERRAL },
-      },
+      select: { leadsCount: true, qualifiedCount: true },
     });
+    
+    if (user) {
+      const totalBalls = user.leadsCount + (user.qualifiedCount * 5);
+      console.log(`[v0] User ${referrerUserId} totalBalls calculated: ${totalBalls}`);
+    }
+    
+    return user;
   }
 
   // Admin statistikasi
