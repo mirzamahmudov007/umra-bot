@@ -61,9 +61,11 @@ export class BotUpdate {
         return;
       }
 
-      // 3. Start payload tekshirish (referral kod)
-      const payload = ctx.startPayload;
-      if (payload) {
+      // 3. Start payload tekshirish (referral kod) - Telegraf da match orqali olinadi
+      const payload = (ctx.message && 'text' in ctx.message && ctx.message.text) 
+        ? ctx.message.text.split(' ')[1] 
+        : null;
+      if (payload && payload !== me.refCode) {
         await this.handleReferral(ctx, me, payload);
       }
 
@@ -288,8 +290,9 @@ export class BotUpdate {
       }
 
       const referrals = await this.users.findByReferrerId(user.id);
-      const ballsNeeded = 100 - user.totalBalls;
-      const progressPercent = Math.min(100, Math.round((user.totalBalls / 100) * 100));
+      const totalBalls = user.qualifiedCount * 5 + user.leadsCount;
+      const ballsNeeded = Math.max(0, 100 - totalBalls);
+      const progressPercent = Math.min(100, Math.round((totalBalls / 100) * 100));
 
       // Progress bar
       const filledBars = Math.round(progressPercent / 10);
@@ -301,9 +304,9 @@ export class BotUpdate {
       message += `🔗 <b>Referral kodingiz:</b> <code>${user.refCode}</code>\n\n`;
 
       message += `💰 <b>BALLALAR:</b>\n`;
-      message += `🎯 <b>Jami ballalar:</b> <code>${user.totalBalls}/100</code>\n`;
+      message += `🎯 <b>Jami ballalar:</b> <code>${totalBalls}/100</code>\n`;
       message += `${progressBar} ${progressPercent}%\n`;
-      message += `📈 <b>Kerak qolgan:</b> ${Math.max(0, ballsNeeded)} ball\n\n`;
+      message += `📈 <b>Kerak qolgan:</b> ${ballsNeeded} ball\n\n`;
 
       message += `📈 <b>TAHLIL:</b>\n`;
       message += `• Jami takliflar: <b>${user.leadsCount}</b> (har biri +1 ball)\n`;
@@ -451,5 +454,63 @@ export class BotUpdate {
     } catch (error) {
       this.logger.error('BotUpdate', 'help command da xato', error);
     }
+  }
+
+  @Command('me')
+  async onMe(@Ctx() ctx: Context) {
+    const from = ctx.from;
+    if (!from) return;
+
+    try {
+      const user = await this.users.findByTelegramId(BigInt(from.id));
+      if (!user) {
+        await ctx.reply('❌ Siz avval ro\'yxatdan o\'tmagansiz. /start ni bosing.', { parse_mode: 'HTML' });
+        return;
+      }
+
+      const message = `👤 <b>SIZNING MA'LUMOTLARINGIZ</b>\n\n` +
+        `<b>Ism:</b> ${user.firstName || 'Noma\'lum'}\n` +
+        `<b>Username:</b> @${user.username || 'Noma\'lum'}\n` +
+        `<b>Telegram ID:</b> <code>${user.telegramId}</code>\n` +
+        `<b>Ro'yxatda olingan vaqt:</b> ${new Date(user.createdAt).toLocaleDateString('uz-UZ')}\n\n` +
+        `<b>Refera​l kodi:</b> <code>${user.refCode}</code>\n\n` +
+        `Shu kodni o'zaro ulashish uchun <b>/share</b> buyrug'ini bosing.`;
+
+      await ctx.replyWithHTML(message);
+    } catch (error) {
+      this.logger.error('BotUpdate', 'me command da xato', error);
+    }
+  }
+
+  @Command('share')
+  async onShare(@Ctx() ctx: Context) {
+    const from = ctx.from;
+    if (!from) return;
+
+    try {
+      const user = await this.users.findByTelegramId(BigInt(from.id));
+      if (!user) {
+        await ctx.reply('❌ Siz avval ro\'yxatdan o\'tmagansiz. /start ni bosing.', { parse_mode: 'HTML' });
+        return;
+      }
+
+      const personalLink = `https://t.me/${this.BOT_USERNAME}?start=${user.refCode}`;
+      const message = `🔗 <b>REFERRAL LINKINGIZ</b>\n\n` +
+        `Quyidagi linkni do'stlaringizga yuboring:\n\n` +
+        `<code>${personalLink}</code>\n\n` +
+        `<b>Do'stingiz link orqali botga kirganda:</b>\n` +
+        `💰 Siz <b>+1 ball</b> olasiz\n` +
+        `🎁 Agar ular umra chiptasini sotib olsa <b>+5 ball</b> qo'shilib qoladi\n\n` +
+        `<i>Linkni nusxa olish uchun ustiga bosing!</i>`;
+
+      await ctx.replyWithHTML(message);
+    } catch (error) {
+      this.logger.error('BotUpdate', 'share command da xato', error);
+    }
+  }
+
+  @Command('start')
+  async onStartCommand(@Ctx() ctx: Context) {
+    await this.onStart(ctx);
   }
 }
