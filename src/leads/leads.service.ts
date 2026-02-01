@@ -174,8 +174,6 @@ export class LeadsService {
         data: {
           status: "QUALIFIED",
           qualifiedAt: new Date(),
-          ballsAwarded: BALLS_PER_QUALIFIED,
-          ballsAwardedAt: new Date(),
         },
       });
 
@@ -184,7 +182,6 @@ export class LeadsService {
         where: { id: lead.referrerUserId },
         data: { 
           qualifiedCount: { increment: 1 },
-          qualifiedBalls: { increment: BALLS_PER_QUALIFIED },
           totalBalls: { increment: BALLS_PER_QUALIFIED },
         },
       });
@@ -200,9 +197,69 @@ export class LeadsService {
     return this.prisma.botUser.update({
       where: { id: referrerUserId },
       data: {
-        directReferralBalls: { increment: BALLS_PER_REFERRAL },
         totalBalls: { increment: BALLS_PER_REFERRAL },
       },
     });
+  }
+
+  // Admin statistikasi
+  async getLeadsStats() {
+    const [totalLeads, pendingLeads, joinedLeads, qualifiedLeads] = await Promise.all([
+      this.prisma.lead.count(),
+      this.prisma.lead.count({ where: { status: 'PENDING' } }),
+      this.prisma.lead.count({ where: { status: 'JOINED' } }),
+      this.prisma.lead.count({ where: { status: 'QUALIFIED' } }),
+    ]);
+
+    const totalUsers = await this.prisma.botUser.count();
+    const totalQualifiedBalls = await this.prisma.botUser.aggregate({
+      _sum: { qualifiedCount: true },
+    });
+
+    return {
+      totalLeads,
+      pendingLeads,
+      joinedLeads,
+      qualifiedLeads,
+      totalUsers,
+      conversionRate: totalLeads > 0 ? ((qualifiedLeads / totalLeads) * 100).toFixed(2) : 0,
+      totalQualifiedCount: totalQualifiedBalls._sum.qualifiedCount || 0,
+    };
+  }
+
+  // Top referrers ba ballalar bilan
+  async getTopReferrersWithBalls(limit: number = 20) {
+    return this.prisma.botUser.findMany({
+      where: { leadsCount: { gt: 0 } },
+      orderBy: [
+        { qualifiedCount: 'desc' },
+        { leadsCount: 'desc' },
+      ],
+      take: limit,
+      select: {
+        id: true,
+        firstName: true,
+        username: true,
+        leadsCount: true,
+        qualifiedCount: true,
+        createdAt: true,
+        _count: {
+          select: {
+            referredUsers: true,
+          },
+        },
+      },
+    }).then((users) =>
+      users.map((u: any) => ({
+        ...u,
+        totalBalls: u.qualifiedCount * 5 + u.leadsCount,
+        rank: 0,
+      }))
+    ).then((users) =>
+      users.map((u, i) => ({
+        ...u,
+        rank: i + 1,
+      }))
+    );
   }
 }

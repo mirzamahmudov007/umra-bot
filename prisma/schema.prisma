@@ -30,22 +30,13 @@ model BotUser {
   leadsCount              Int      @default(0)
   qualifiedCount          Int      @default(0)
   referredById            String?
-  isChannelMember         Boolean  @default(false)
   lastMembershipCheck     DateTime?
-  
-  // Ball tizimi
-  totalBalls              Int      @default(0)
-  directReferralBalls     Int      @default(0)  // Har taklif +1 ball
-  qualifiedBalls          Int      @default(0)  // Har toza lead +5 ball
   
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
   
   referredUsers           Lead[]   @relation("referrer")
   leads                   Lead[]   @relation("lead")
-  
-  @@index([totalBalls])
-  @@index([isChannelMember])
 }
 
 model Lead {
@@ -67,10 +58,6 @@ model Lead {
   // join request tracking
   joinRequestId    String?    // Telegram join request ID
   joinedAt         DateTime?  // Kanalga kirgan vaqt
-
-  // Ball tizimi
-  ballsAwarded     Int        @default(0)
-  ballsAwardedAt   DateTime?
 
   leadUser         BotUser @relation("LeadUser", fields: [leadUserId], references: [id], onDelete: Cascade)
   referrerUser     BotUser @relation("ReferrerUser", fields: [referrerUserId], references: [id], onDelete: Cascade)

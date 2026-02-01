@@ -54,7 +54,6 @@ export class UsersService {
     return this.prisma.botUser.update({
       where: { telegramId },
       data: {
-        isChannelMember: isMember,
         lastMembershipCheck: new Date(),
       },
     });

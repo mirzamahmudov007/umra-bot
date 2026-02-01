@@ -18,6 +18,17 @@ export class AdminLeadsController {
     });
   }
 
+  @Get('stats')
+  async getStats() {
+    return this.leads.getLeadsStats();
+  }
+
+  @Get('top-referrers')
+  async getTopReferrers(@Query('limit') limit?: string) {
+    const lim = limit ? Math.min(parseInt(limit), 100) : 20;
+    return this.leads.getTopReferrersWithBalls(lim);
+  }
+
   @Post(':id/qualify')
   async qualify(@Param('id') id: string) {
     return this.leads.qualifyLead(id);
